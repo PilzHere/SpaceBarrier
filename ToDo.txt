@@ -1,0 +1,2 @@
+ToDo:
+#1 Offset models, so that texture squares appear in middle. It will look better when player is in middle of field.

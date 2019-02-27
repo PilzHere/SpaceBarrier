@@ -1,0 +1,20 @@
+
+atlas01.png
+size: 2048,2048
+format: RGBA8888
+filter: Nearest,Nearest
+repeat: none
+bg01
+  rotate: false
+  xy: 0, 1306
+  size: 1746, 440
+  orig: 1746, 440
+  offset: 0, 0
+  index: -1
+player
+  rotate: false
+  xy: 0, 1242
+  size: 64, 64
+  orig: 64, 64
+  offset: 0, 0
+  index: -1

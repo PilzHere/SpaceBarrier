@@ -1,33 +1,133 @@
 package mysko.pilzhere.spacebarrier;
 
-import com.badlogic.gdx.ApplicationAdapter;
+import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.Pixmap.Format;
+import com.badlogic.gdx.graphics.Texture.TextureFilter;
+import com.badlogic.gdx.graphics.Texture.TextureWrap;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureAtlas;
+import com.badlogic.gdx.graphics.g3d.ModelBatch;
+import com.badlogic.gdx.graphics.glutils.FrameBuffer;
+import com.badlogic.gdx.tools.texturepacker.TexturePacker;
+import com.badlogic.gdx.tools.texturepacker.TexturePacker.Settings;
 
-public class SpaceBarrier extends ApplicationAdapter {
-	SpriteBatch batch;
-	Texture img;
+import mysko.pilzhere.spacebarrier.screens.GameScreen;
+
+public class SpaceBarrier extends Game {
+	public final AssetManager assMan = new AssetManager();
+	private final Settings packerSettings = new Settings();
+
+	public SpriteBatch spriteBatch;
+	public FrameBuffer fbo;
+	public ModelBatch modelBatch;
+
+	private int fboRealWidth = 854;
+	private int fboRealHeight = 480;
+	private int fboScale = 2;
+	public int fboVirtualWidth = 1280;
+	public int fboVirtualHeight = 720;
 	
+	public static int PPM = 32;
+
 	@Override
-	public void create () {
-		batch = new SpriteBatch();
-		img = new Texture("badlogic.jpg");
+	public void create() {
+		setTexturePackerSettings(packerSettings);
+		packTexturesToAtlases(packerSettings);
+
+		loadAssets();
+
+		spriteBatch = new SpriteBatch();
+		fbo = new FrameBuffer(Format.RGB888, fboRealWidth / fboScale, fboRealHeight / fboScale, true);
+		fbo.getColorBufferTexture().setFilter(TextureFilter.Nearest, TextureFilter.Nearest);
+		modelBatch = new ModelBatch();
+
+		setScreen(new GameScreen(this));
+	}
+
+	private void setTexturePackerSettings(Settings settings) {
+		settings.outputFormat = "png";
+		settings.format = Format.RGBA8888;
+
+		settings.maxWidth = 2048;
+		settings.maxHeight = 2048;
+		settings.filterMag = TextureFilter.Nearest;
+		settings.filterMin = TextureFilter.Nearest;
+		settings.paddingX = 0;
+		settings.paddingY = 0;
+		settings.wrapX = TextureWrap.ClampToEdge;
+		settings.wrapY = TextureWrap.ClampToEdge;
+
+		settings.fast = true;
+		settings.duplicatePadding = true;
+		settings.edgePadding = true;
+		settings.pot = true;
+		settings.alias = true;
+		settings.ignoreBlankImages = true;
+		settings.bleed = true;
+		settings.square = true;
+		settings.useIndexes = true;
+		settings.limitMemory = true;
+	}
+
+	private void packTexturesToAtlases(Settings settings) {
+		if (TexturePacker.isModified("textures/atlas01", "textures/atlas01/atlas", "atlas01", settings)) {
+			TexturePacker.process(settings, "textures/atlas01", "textures/atlas01/atlas", "atlas01", null);
+		}
+	}
+
+	public TextureAtlas atlas01;
+
+	private void loadAssets() {
+		loadFonts(assMan);
+		loadTextures(assMan);
+//		loadShaders(assMan);
+		loadModels(assMan);
+		loadSounds(assMan);
+
+		assMan.finishLoading();
+
+		atlas01 = assMan.get("textures/atlas01/atlas/atlas01.atlas", TextureAtlas.class);
+	}
+
+	private void loadFonts(AssetManager assMan) {
+
+	}
+
+	private void loadTextures(AssetManager assMan) {
+		assMan.load("textures/atlas01/atlas/atlas01.atlas", TextureAtlas.class);
+	}
+
+	private void loadShaders(AssetManager assMan) {
+
+	}
+
+	private void loadModels(AssetManager assMan) {
+
+	}
+
+	private void loadSounds(AssetManager assMan) {
+
 	}
 
 	@Override
-	public void render () {
-		Gdx.gl.glClearColor(1, 0, 0, 1);
+	public void render() {
+//		Clear void
+		Gdx.gl.glClearColor(0.25f, 0.45f, 0.55f, 1);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-		batch.begin();
-		batch.draw(img, 0, 0);
-		batch.end();
+
+		super.render();
 	}
-	
+
 	@Override
-	public void dispose () {
-		batch.dispose();
-		img.dispose();
+	public void dispose() {
+		super.dispose();
+
+		spriteBatch.dispose();
+		fbo.dispose();
+
+		atlas01.dispose();
 	}
 }

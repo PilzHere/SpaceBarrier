@@ -1,6 +1,4 @@
 buildscript {
-    
-
     repositories {
         mavenLocal()
         mavenCentral()
@@ -13,8 +11,6 @@ buildscript {
         classpath 'org.wisepersist:gwt-gradle-plugin:1.0.6'
         classpath 'com.android.tools.build:gradle:3.2.0'
         classpath 'com.mobidevelop.robovm:robovm-gradle-plugin:2.3.5'
-        
-
     }
 }
 
@@ -29,7 +25,7 @@ allprojects {
         roboVMVersion = '2.3.5'
         box2DLightsVersion = '1.4'
         ashleyVersion = '1.7.0'
-        aiVersion = '1.8.0'
+        aiVersion = '1.8.1'
     }
 
     repositories {
@@ -43,7 +39,6 @@ allprojects {
 
 project(":desktop") {
     apply plugin: "java"
-
 
     dependencies {
         compile project(":core")
@@ -85,8 +80,7 @@ project(":android") {
 project(":ios") {
     apply plugin: "java"
     apply plugin: "robovm"
-
-
+    
     dependencies {
         compile project(":core")
         compile "com.mobidevelop.robovm:robovm-rt:$roboVMVersion"
@@ -101,8 +95,7 @@ project(":ios") {
 project(":html") {
     apply plugin: "gwt"
     apply plugin: "war"
-
-
+    
     dependencies {
         compile project(":core")
         compile "com.badlogicgames.gdx:gdx-backend-gwt:$gdxVersion"
@@ -119,13 +112,13 @@ project(":html") {
 
 project(":core") {
     apply plugin: "java"
-
-
+    
     dependencies {
         compile "com.badlogicgames.gdx:gdx:$gdxVersion"
         compile "com.badlogicgames.gdx:gdx-box2d:$gdxVersion"
         compile "com.badlogicgames.gdx:gdx-controllers:$gdxVersion"
         
+        compile "com.badlogicgames.gdx:gdx-tools:$gdxVersion"
     }
 }
 
