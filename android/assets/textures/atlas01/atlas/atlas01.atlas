@@ -6,14 +6,21 @@ filter: Nearest,Nearest
 repeat: none
 bg01
   rotate: false
-  xy: 0, 1306
+  xy: 0, 1370
+  size: 1746, 440
+  orig: 1746, 440
+  offset: 0, 0
+  index: -1
+bg02
+  rotate: false
+  xy: 0, 930
   size: 1746, 440
   orig: 1746, 440
   offset: 0, 0
   index: -1
 player
   rotate: false
-  xy: 0, 1242
+  xy: 1746, 1746
   size: 64, 64
   orig: 64, 64
   offset: 0, 0

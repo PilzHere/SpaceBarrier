@@ -21,7 +21,8 @@ public class SpaceBarrier extends Game {
 	private final Settings packerSettings = new Settings();
 
 	public SpriteBatch spriteBatch;
-	public FrameBuffer fbo;
+	public FrameBuffer fbo01;
+	public FrameBuffer fbo02;
 	public ModelBatch modelBatch;
 
 	private int fboRealWidth = 854;
@@ -29,8 +30,8 @@ public class SpaceBarrier extends Game {
 	private int fboScale = 2;
 	public int fboVirtualWidth = 1280;
 	public int fboVirtualHeight = 720;
-	
-	public static int PPM = 32;
+
+	public final int PPM = 16;
 
 	@Override
 	public void create() {
@@ -39,9 +40,12 @@ public class SpaceBarrier extends Game {
 
 		loadAssets();
 
+		fbo01 = new FrameBuffer(Format.RGBA8888, fboRealWidth / fboScale, fboRealHeight / fboScale, true);
+		fbo01.getColorBufferTexture().setFilter(TextureFilter.Nearest, TextureFilter.Nearest);
+		fbo02 = new FrameBuffer(Format.RGBA8888, fboRealWidth / fboScale, fboRealHeight / fboScale, true);
+		fbo02.getColorBufferTexture().setFilter(TextureFilter.Nearest, TextureFilter.Nearest);
+
 		spriteBatch = new SpriteBatch();
-		fbo = new FrameBuffer(Format.RGB888, fboRealWidth / fboScale, fboRealHeight / fboScale, true);
-		fbo.getColorBufferTexture().setFilter(TextureFilter.Nearest, TextureFilter.Nearest);
 		modelBatch = new ModelBatch();
 
 		setScreen(new GameScreen(this));
@@ -100,9 +104,9 @@ public class SpaceBarrier extends Game {
 		assMan.load("textures/atlas01/atlas/atlas01.atlas", TextureAtlas.class);
 	}
 
-	private void loadShaders(AssetManager assMan) {
-
-	}
+//	private void loadShaders(AssetManager assMan) {
+//
+//	}
 
 	private void loadModels(AssetManager assMan) {
 
@@ -126,7 +130,8 @@ public class SpaceBarrier extends Game {
 		super.dispose();
 
 		spriteBatch.dispose();
-		fbo.dispose();
+		fbo01.dispose();
+		fbo02.dispose();
 
 		atlas01.dispose();
 	}

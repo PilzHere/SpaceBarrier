@@ -17,7 +17,7 @@ public class Player extends Entity {
 	TextureRegion texRegPlayer;
 
 	public Sprite playerSprite;
-	
+
 	public Body body;
 
 	public Player(GameScreen screen) {
@@ -25,10 +25,11 @@ public class Player extends Entity {
 
 		texRegPlayer = new TextureRegion(screen.game.atlas01.findRegion("player"));
 		playerSprite = new Sprite(texRegPlayer);
-		
+
 		BodyDef bodyDef = new BodyDef();
 		bodyDef.type = BodyType.DynamicBody;
-		bodyDef.position.set((Gdx.graphics.getWidth() / 2) / 16, (Gdx.graphics.getHeight() / 2) / 16);
+		bodyDef.position.set((Gdx.graphics.getWidth() / 2) / screen.game.PPM,
+				(Gdx.graphics.getHeight() / 2) / screen.game.PPM);
 
 		body = screen.world.createBody(bodyDef);
 		body.setSleepingAllowed(false);
@@ -36,26 +37,26 @@ public class Player extends Entity {
 		PolygonShape poly = new PolygonShape();
 //		CircleShape circle = new CircleShape();
 //		circle.setRadius(60f);
-		poly.setAsBox(32 / 16, 32 / 16);
+		poly.setAsBox(32 / screen.game.PPM, 32 / screen.game.PPM);
 
 		FixtureDef fixtureDef = new FixtureDef();
 //		fixtureDef.shape = circle;
 		fixtureDef.shape = poly;
-		fixtureDef.density = 0; 
+		fixtureDef.density = 0;
 		fixtureDef.friction = 0;
 		fixtureDef.restitution = 0;
 
 		Fixture fixture = body.createFixture(fixtureDef);
 
 		poly.dispose();
-		
-		playerSprite.setSize(playerSprite.getWidth() / 16, playerSprite.getHeight() / 16);
+
+		playerSprite.setSize(playerSprite.getWidth() / screen.game.PPM, playerSprite.getHeight() / screen.game.PPM);
 	}
 
 	@Override
 	public void tick(float delta) {
 		super.tick(delta);
-		
+
 		playerSprite.setPosition(body.getPosition().x - playerSprite.getWidth() / 2,
 				body.getPosition().y - playerSprite.getHeight() / 2);
 	}
