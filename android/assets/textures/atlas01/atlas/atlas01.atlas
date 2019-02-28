@@ -1,27 +1,27 @@
 
 atlas01.png
-size: 2048,2048
+size: 512,512
 format: RGBA8888
 filter: Nearest,Nearest
 repeat: none
 bg01
   rotate: false
-  xy: 0, 1370
-  size: 1746, 440
-  orig: 1746, 440
+  xy: 0, 162
+  size: 320, 180
+  orig: 320, 180
   offset: 0, 0
   index: -1
 bg02
   rotate: false
-  xy: 0, 930
-  size: 1746, 440
-  orig: 1746, 440
+  xy: 0, 342
+  size: 436, 110
+  orig: 436, 110
   offset: 0, 0
   index: -1
 player
   rotate: false
-  xy: 1746, 1746
-  size: 64, 64
-  orig: 64, 64
+  xy: 436, 436
+  size: 16, 16
+  orig: 16, 16
   offset: 0, 0
   index: -1

@@ -50,7 +50,7 @@ public class Player extends Entity {
 
 		poly.dispose();
 
-		playerSprite.setSize(playerSprite.getWidth() / screen.game.PPM, playerSprite.getHeight() / screen.game.PPM);
+		playerSprite.setSize((playerSprite.getWidth() / screen.game.PPM) * 4, (playerSprite.getHeight() / screen.game.PPM) * 4);
 	}
 
 	@Override

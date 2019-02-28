@@ -39,15 +39,15 @@ public class GameScreen implements Screen {
 
 //	Colors
 //	int clearColor01 = 0xba8af3ff;
-	private final Color clearColor01 = new Color(186 / 255f, 138 / 255f, 243 / 255f, 1);
+	private final Color clearColor01 = new Color(186f / 255, 138f / 255, 243f / 255, 1);
 
-//	Green
+//	Greens
 	private final int darkerGreen = 0x73c373ff;
 	private final int darkGreen = 0x84d384ff;
 	private final int lightGreen = 0x94e394ff;
 	private final int lighterGreen = 0xa5f3a5ff;
 
-//	Brown
+//	Browns
 	private final int darkerBrown = 0xc6a284ff;
 	private final int darkBrown = 0xd6b294ff;
 	private final int lightBrown = 0xe7c3a5ff;
@@ -89,63 +89,81 @@ public class GameScreen implements Screen {
 
 		texRegBgMoving01 = new TextureRegion(game.atlas01.findRegion("bg02"));
 		spriteBgMoving01 = new Sprite(texRegBgMoving01);
-		spriteBgMoving01.setSize(spriteBgMoving01.getWidth() / game.PPM, spriteBgMoving01.getHeight() / game.PPM);
+		spriteBgMoving01.setSize((spriteBgMoving01.getWidth() / game.PPM) * 4,
+				(spriteBgMoving01.getHeight() / game.PPM) * 4);
 		spriteBgMoving01.setPosition(((Gdx.graphics.getWidth() / 2) / game.PPM) - (spriteBgMoving01.getWidth() / 2),
 				222f / game.PPM);
 
 		texRegBgStatic01 = new TextureRegion(game.atlas01.findRegion("bg01"));
 		spriteBgStatic01 = new Sprite(texRegBgStatic01);
-		spriteBgStatic01.setSize(spriteBgStatic01.getWidth() / game.PPM, spriteBgStatic01.getHeight() / game.PPM);
+		spriteBgStatic01.setSize((spriteBgStatic01.getWidth() / game.PPM) * 4,
+				(spriteBgStatic01.getHeight() / game.PPM) * 4);
 		spriteBgStatic01.setPosition(((Gdx.graphics.getWidth() / 2) / game.PPM) - (spriteBgStatic01.getWidth() / 2),
-				222f / game.PPM);
+				/* 222f */ 0 / game.PPM);
 
 //		Setup textures
-		int pixWidth = 512;
-		int pixHeight = 1024;
+		final int pixWidth = 512;
+		final int pixHeight = 1024;
 
 		pix = paintPixMap(pix, pixWidth, pixHeight, darkerGreen, lightGreen, darkGreen, lighterGreen);
-		tex = new Texture(pix);
-		tex.setFilter(TextureFilter.Nearest, TextureFilter.Nearest);
+		tex = pixToTextureWithNearestFilter(tex, pix);
 
 		pix2 = paintPixMap(pix2, pixWidth, pixHeight, darkerBrown, lightBrown, darkBrown, lighterBrown);
-		tex2 = new Texture(pix2);
-		tex2.setFilter(TextureFilter.Nearest, TextureFilter.Nearest);
+		tex2 = pixToTextureWithNearestFilter(tex2, pix2);
+
+		final int floorWidth = 400;
+		final int floorHeight = 0; // Floor is flat!
+		final int floorDepth = 200;
+
+		final Vector3 floorPos = new Vector3(0, 0, -15);
+		final Vector3 floorPosOffset = new Vector3(0, 0, floorDepth);
 
 //		Create models
-		model = modelBuilder.createBox(400, 0, 200, new Material(TextureAttribute.createDiffuse(tex)),
-				Usage.Position | Usage.TextureCoordinates);
+		model = buildFloor(floorWidth, floorHeight, floorDepth, tex);
 		modelInstFloor01 = new ModelInstance(model);
-		modelInstFloor01.transform.setToTranslation(new Vector3(0, 0, -15));
+		modelInstFloor01.transform.setToTranslation(floorPos);
 
-		model2 = modelBuilder.createBox(400, 0, 200, new Material(TextureAttribute.createDiffuse(tex2)),
-				Usage.Position | Usage.TextureCoordinates);
+		model2 = buildFloor(floorWidth, floorHeight, floorDepth, tex2);
 		modelInstFloor02 = new ModelInstance(model2);
-		modelInstFloor02.transform.setToTranslation(new Vector3(0, 0, -15 - 200));
+		modelInstFloor02.transform.setToTranslation(floorPos.cpy().add(floorPosOffset));
 
 		player = new Player(this);
+	}
+
+	private Model buildFloor(int width, int height, int depth, Texture tex) {
+		Model model = modelBuilder.createBox(width, height, depth, new Material(TextureAttribute.createDiffuse(tex)),
+				Usage.Position | Usage.TextureCoordinates);
+
+		return model;
 	}
 
 	private Pixmap paintPixMap(Pixmap pix, int width, int height, int color1, int color2, int color3, int color4) {
 		pix = new Pixmap(width, height, Format.RGB888);
 
-//		Paint pixels
 		for (int i = 0; i < width; i++) {
 			for (int j = 0; j < height; j++) {
-				if (i % 2 == 0) {
+				if (i % 2 == 0) { // Let's paint pixels!
 					if (j % 2 == 0)
-						pix.drawPixel(i, j, darkerGreen);
+						pix.drawPixel(i, j, color1);
 					else
-						pix.drawPixel(i, j, lightGreen);
+						pix.drawPixel(i, j, color2);
 				} else {
 					if (j % 2 == 0)
-						pix.drawPixel(i, j, darkGreen);
+						pix.drawPixel(i, j, color3);
 					else
-						pix.drawPixel(i, j, lighterGreen);
+						pix.drawPixel(i, j, color4);
 				}
 			}
 		}
 
 		return pix;
+	}
+
+	private Texture pixToTextureWithNearestFilter(Texture tex, Pixmap pix) {
+		tex = new Texture(pix);
+		tex.setFilter(TextureFilter.Nearest, TextureFilter.Nearest);
+
+		return tex;
 	}
 
 	private void initPhysicsEngine() {
@@ -157,7 +175,7 @@ public class GameScreen implements Screen {
 		final boolean simulateInactiveBodies = true;
 
 		world = new World(gravity, simulateInactiveBodies);
-		
+
 		return world;
 	}
 
@@ -188,15 +206,16 @@ public class GameScreen implements Screen {
 
 	}
 
-	private float floorSpeedY = 13 / 3;
+	private float floorSpeedY = 13f / 3;
 	private float floorSpeedX = 5.25f / 2;
+
+	private final int camPosSpeed = 3;
+	private final float camDirSpeed = 0.4f;
 
 	private final int playerMinX = 5;
 	private final int playerMaxX = 75;
-
 	private final int playerMinY = 5;
 	private final int playerMaxY = 40;
-
 	private final int playerSpeedX = 30;
 	private final int playerSpeedY = 20;
 
@@ -204,26 +223,20 @@ public class GameScreen implements Screen {
 
 	private void handleInput(float delta) {
 		if (Gdx.input.isKeyPressed(Input.Keys.W)) {
-//			modelInstFloor01.transform.translate(new Vector3(0, 0, floorSpeedY * delta));
-//			modelInstFloor02.transform.translate(new Vector3(0, 0, floorSpeedY * delta));
-
 			if (player.body.getPosition().y <= playerMaxY) {
 				player.body.setLinearVelocity(new Vector2(player.body.getLinearVelocity().x, playerSpeedY));
-				camPersp.position.y += floorSpeedY / 3 * delta;
 
-				camPersp.direction.y = camPersp.direction.y - 0.4f * delta;
+				camPersp.position.y += floorSpeedY / camPosSpeed * delta;
+				camPersp.direction.y = camPersp.direction.y - camDirSpeed * delta;
 			} else {
 				player.body.setLinearVelocity(new Vector2(player.body.getLinearVelocity().x, 0));
 			}
 		} else if (Gdx.input.isKeyPressed(Input.Keys.S)) {
-//			modelInstFloor01.transform.translate(new Vector3(0, 0, -floorSpeedY * delta));
-//			modelInstFloor02.transform.translate(new Vector3(0, 0, -floorSpeedY * delta));
-
 			if (player.body.getPosition().y >= playerMinY) {
 				player.body.setLinearVelocity(new Vector2(player.body.getLinearVelocity().x, -playerSpeedY));
-				camPersp.position.y -= floorSpeedY / 3 * delta;
 
-				camPersp.direction.y = camPersp.direction.y + 0.4f * delta;
+				camPersp.position.y -= floorSpeedY / camPosSpeed * delta;
+				camPersp.direction.y = camPersp.direction.y + camDirSpeed * delta;
 			} else {
 				player.body.setLinearVelocity(new Vector2(player.body.getLinearVelocity().x, 0));
 			}
@@ -232,7 +245,7 @@ public class GameScreen implements Screen {
 		}
 
 		if (Gdx.input.isKeyPressed(Input.Keys.A)) {
-			if (player.body.getPosition().x > playerMinX) { // 100
+			if (player.body.getPosition().x > playerMinX) {
 				player.body.setLinearVelocity(new Vector2(-playerSpeedX, player.body.getLinearVelocity().y));
 
 				modelInstFloor01.transform.translate(new Vector3(floorSpeedX * delta, 0, 0));
@@ -244,7 +257,7 @@ public class GameScreen implements Screen {
 //				player.body.getPosition().set(new Vector2(playerMinX, player.body.getPosition().y));
 			}
 		} else if (Gdx.input.isKeyPressed(Input.Keys.D)) {
-			if (player.body.getPosition().x < playerMaxX) { // 1180
+			if (player.body.getPosition().x < playerMaxX) {
 				player.body.setLinearVelocity(new Vector2(playerSpeedX, player.body.getLinearVelocity().y));
 
 				modelInstFloor01.transform.translate(new Vector3(-floorSpeedX * delta, 0, 0));
@@ -262,23 +275,31 @@ public class GameScreen implements Screen {
 //		System.out.println(player.body.getLinearVelocity());
 //		System.out.println(player.body.getPosition());
 //		System.out.println(camPersp.position.y);
-
 //		System.out.println(camPersp.direction);
-
 //		System.out.println(spriteBgMoving01.getY());
-
 //		System.out.println(Gdx.app.getJavaHeap() / (1024L * 1024L) + " MiB");
 	}
 
 	private final float spriteBgMoving01MaxY = 13.875f;
 	private final float spriteBgMoving01MinY = 13.3125f;
 
+	private final float camPerspPosMinY = 0.5f;
+	private final float camPerspPosMaxY = 2.75f;
+	private final float camPerspDirMinY = -0.2f;
+	private final float camPerspDirMaxY = 0.24253564f;
+
+	private final float floorResetPosZ = 100;
+	private final float floorMaxX = 14;
+
+	private final int spriteBgMoving01PosY = 350;
+	private final int spriteBgMoving01HolyNumber = 30;
+
 	private void tick(float delta) {
 		moveFloorTowardsCam(delta);
-		limitCameraPosY(0.5f, 2.75f);
-		limitCameraDirY(-0.2f, 0.24253564f);
-		loopFloor(100);
-		keepFloorInView(14);
+		limitCameraPosY(camPerspPosMinY, camPerspPosMaxY);
+		limitCameraDirY(camPerspDirMinY, camPerspDirMaxY);
+		loopFloor(floorResetPosZ);
+		keepFloorInView(floorMaxX);
 
 		player.tick(delta);
 
@@ -288,13 +309,14 @@ public class GameScreen implements Screen {
 			spriteBgMoving01.setPosition(spriteBgMoving01.getX(), spriteBgMoving01MinY);
 		}
 
-//		spriteBg01.setPosition(spriteBg01.getX(), ((225/16)  - (camPersp.position.y / 4)));
-		spriteBgMoving01.setPosition(spriteBgMoving01.getX(), ((350 / game.PPM) - (camPersp.direction.y * 30)));
+//		spriteBg01.setPosition(spriteBg01.getX(), ((225/16)  - (camPersp.position.y / 4))); // old
+		spriteBgMoving01.setPosition(spriteBgMoving01.getX(),
+				((spriteBgMoving01PosY / game.PPM) - (camPersp.direction.y * spriteBgMoving01HolyNumber)));
 
 		camPersp.update();
 //		camOrtho.update();
 	}
-	
+
 	private void moveFloorTowardsCam(float delta) {
 		modelInstFloor01.transform.translate(new Vector3(0, 0, floorSpeedY * delta));
 		modelInstFloor02.transform.translate(new Vector3(0, 0, floorSpeedY * delta));
@@ -317,14 +339,14 @@ public class GameScreen implements Screen {
 
 	private void loopFloor(float zResetPos) {
 		if (modelInstFloor01.transform.getTranslation(new Vector3()).z >= zResetPos) {
-			modelInstFloor01.transform.setTranslation(
-					modelInstFloor02.transform.getTranslation(new Vector3()).cpy().add(new Vector3(0, 0, -200)));
+			modelInstFloor01.transform.setTranslation(modelInstFloor02.transform.getTranslation(new Vector3()).cpy()
+					.add(new Vector3(0, 0, -zResetPos * 2)));
 			Gdx.app.log("Floor", "Floor 1 repositioned.");
 		}
 
 		if (modelInstFloor02.transform.getTranslation(new Vector3()).z >= zResetPos) {
-			modelInstFloor02.transform.setTranslation(
-					modelInstFloor01.transform.getTranslation(new Vector3()).cpy().add(new Vector3(0, 0, -200)));
+			modelInstFloor02.transform.setTranslation(modelInstFloor01.transform.getTranslation(new Vector3()).cpy()
+					.add(new Vector3(0, 0, -zResetPos * 2)));
 			Gdx.app.log("Floor", "Floor 2 repositioned.");
 		}
 	}
@@ -351,53 +373,43 @@ public class GameScreen implements Screen {
 		game.spriteBatch.getProjectionMatrix().setToOrtho2D(0, 0, Gdx.graphics.getWidth() / game.PPM,
 				Gdx.graphics.getHeight() / game.PPM);
 
-//		fbo2
-		game.fbo01.begin();
+		game.fbo01.begin(); // fbo1
 		clearFbo(clearColor01);
 
 		game.spriteBatch.begin();
-//		render static background
-		spriteBgStatic01.draw(game.spriteBatch);
+		spriteBgStatic01.draw(game.spriteBatch); // render static background
 		game.spriteBatch.end();
 
-//		render models
-		game.modelBatch.begin(camPersp);
+		game.modelBatch.begin(camPersp); // render models
 		game.modelBatch.render(modelInstFloor01);
 		game.modelBatch.render(modelInstFloor02);
 		game.modelBatch.end();
 
-		game.fbo01.end();
-//		fbo2 end
+		game.fbo01.end(); // fbo1 end
 
 		game.spriteBatch.begin();
-//		render fbo2
-		game.spriteBatch.draw(game.fbo01.getColorBufferTexture(),
+		game.spriteBatch.draw(game.fbo01.getColorBufferTexture(), // render fbo2
 				Gdx.graphics.getWidth() / 2 - game.fboVirtualWidth / 2,
 				(Gdx.graphics.getHeight() / 2 - game.fboVirtualHeight / 2), game.fboVirtualWidth / game.PPM,
 				game.fboVirtualHeight / game.PPM, 0, 0, 1, 1);
 		game.spriteBatch.end();
 
-//		fbo1
-		game.fbo02.begin();
+		game.fbo02.begin(); // fbo2
 		clearFbo(0, 0, 0, 0);
 
 		game.spriteBatch.begin();
-//		render moving background
-		spriteBgMoving01.draw(game.spriteBatch);
-
-//		render sprites
-		player.playerSprite.draw(game.spriteBatch);
+		spriteBgMoving01.draw(game.spriteBatch); // render moving background
 		game.spriteBatch.end();
 
-		game.fbo02.end();
-//		fbo1 end
+		game.fbo02.end(); // fbo2 end
 
 		game.spriteBatch.begin();
-//		render fbo1
-		game.spriteBatch.draw(game.fbo02.getColorBufferTexture(),
+		game.spriteBatch.draw(game.fbo02.getColorBufferTexture(), // render fbo1
 				Gdx.graphics.getWidth() / 2 - game.fboVirtualWidth / 2,
 				(Gdx.graphics.getHeight() / 2 - game.fboVirtualHeight / 2), game.fboVirtualWidth / game.PPM,
 				game.fboVirtualHeight / game.PPM, 0, 0, 1, 1);
+
+		player.playerSprite.draw(game.spriteBatch); // render player
 		game.spriteBatch.end();
 
 		b2dDebugRenderer.render(world, game.spriteBatch.getProjectionMatrix());
@@ -423,8 +435,7 @@ public class GameScreen implements Screen {
 	}
 
 	private void clearFbo(Color color) {
-		Gdx.gl.glClearColor(color.r, color.g, color.b, color.a);
-		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
+		clearFbo(color.r, color.g, color.b, color.a);
 	}
 
 	@Override
@@ -452,6 +463,7 @@ public class GameScreen implements Screen {
 	public void dispose() {
 		pix.dispose();
 		pix2.dispose();
+
 		tex.dispose();
 		tex2.dispose();
 
