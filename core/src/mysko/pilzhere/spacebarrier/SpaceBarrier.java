@@ -25,8 +25,8 @@ public class SpaceBarrier extends Game {
 	public FrameBuffer fbo02;
 	public ModelBatch modelBatch;
 
-	private int fboRealWidth = 1280 / 2; // 854
-	private int fboRealHeight = 720 / 2; // 480
+	public int fboRealWidth = 1280 / 2; // 854
+	public int fboRealHeight = 720 / 2; // 480
 	private int fboScale = 2;
 	public int fboVirtualWidth = 1280;
 	public int fboVirtualHeight = 720;

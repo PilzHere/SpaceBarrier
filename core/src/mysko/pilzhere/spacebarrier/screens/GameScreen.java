@@ -1,5 +1,8 @@
 package mysko.pilzhere.spacebarrier.screens;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
@@ -18,17 +21,41 @@ import com.badlogic.gdx.graphics.g3d.Model;
 import com.badlogic.gdx.graphics.g3d.ModelInstance;
 import com.badlogic.gdx.graphics.g3d.attributes.TextureAttribute;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.physics.box2d.Box2D;
 import com.badlogic.gdx.physics.box2d.Box2DDebugRenderer;
+import com.badlogic.gdx.physics.box2d.ContactListener;
 import com.badlogic.gdx.physics.box2d.World;
 
+import mysko.pilzhere.spacebarrier.Contactslistener;
+import mysko.pilzhere.spacebarrier.GameState;
+import mysko.pilzhere.spacebarrier.GameUtils;
+import mysko.pilzhere.spacebarrier.Level01;
 import mysko.pilzhere.spacebarrier.SpaceBarrier;
+import mysko.pilzhere.spacebarrier.entities.Bullet;
+import mysko.pilzhere.spacebarrier.entities.Enemy;
+import mysko.pilzhere.spacebarrier.entities.EnemyBullet;
 import mysko.pilzhere.spacebarrier.entities.Player;
+import mysko.pilzhere.spacebarrier.entities.Scale;
 
 public class GameScreen implements Screen {
+
+	public GameState gameState;
+
 	public SpaceBarrier game;
+
+	private TextureRegion texRegTitle;
+	private Sprite spriteTitle;
+
+	private TextureRegion texRegWin;
+	private Sprite spriteWin;
+
+	private TextureRegion texRegGameOver;
+	private Sprite spriteGameOver;
+
+	public GameUtils gameUtils = new GameUtils(this);
 
 	private final ModelBuilder modelBuilder = new ModelBuilder();
 	private Model model;
@@ -38,7 +65,7 @@ public class GameScreen implements Screen {
 	private ModelInstance modelInstFloor02;
 
 //	Colors
-//	int clearColor01 = 0xba8af3ff;
+//	int clearColor01 = 0xba8af3ff; // old
 	private final Color clearColor01 = new Color(186f / 255, 138f / 255, 243f / 255, 1);
 
 //	Greens
@@ -63,20 +90,46 @@ public class GameScreen implements Screen {
 	private Sprite spriteBgMoving01;
 	private Sprite spriteBgStatic01;
 
-	private Player player;
+	public Player player;
 
-	private Box2DDebugRenderer b2dDebugRenderer;
+	private Pixmap pixEnergyBar;
+	private Texture texEnergyBar;
+	private Sprite barEnergySprite;
+
+	private Pixmap pixHpBar;
+	private Texture texHpBar;
+	private Sprite barHpSprite;
+
+	public Level01 level01;
+
+//	private Box2DDebugRenderer b2dDebugRenderer;
 	public World world;
+	public Contactslistener contactListener;
 
-	private PerspectiveCamera camPersp;
+	public PerspectiveCamera camPersp;
 //	private OrthographicCamera camOrtho;
+
+	public List<Enemy> enemies = new ArrayList<Enemy>();
+	public List<Bullet> bullets = new ArrayList<Bullet>();
+	public List<EnemyBullet> enemyBullets = new ArrayList<EnemyBullet>();
+
+	final int floorWidth = 400;
+	final int floorHeight = 0; // Floor is flat!
+	final int floorDepth = 200;
+
+	final Vector3 floorPos = new Vector3(0, 0, -15);
+	final Vector3 floorPosOffset = new Vector3(0, 0, floorDepth);
 
 	public GameScreen(SpaceBarrier game) {
 		this.game = game;
 
+		gameState = GameState.TITLE_SCREEN;
+
 		initPhysicsEngine();
-		world = setupPhysicsWorld(world);
-		b2dDebugRenderer = initPhysicsDebugRenderer(b2dDebugRenderer);
+		contactListener = new Contactslistener();
+		world = setupPhysicsWorld(world, contactListener);
+
+//		b2dDebugRenderer = initPhysicsDebugRenderer(b2dDebugRenderer);
 		camPersp = initPerspectiveCam(camPersp);
 
 //		camOrtho = new OrthographicCamera();
@@ -111,13 +164,6 @@ public class GameScreen implements Screen {
 		pix2 = paintPixMap(pix2, pixWidth, pixHeight, darkerBrown, lightBrown, darkBrown, lighterBrown);
 		tex2 = pixToTextureWithNearestFilter(tex2, pix2);
 
-		final int floorWidth = 400;
-		final int floorHeight = 0; // Floor is flat!
-		final int floorDepth = 200;
-
-		final Vector3 floorPos = new Vector3(0, 0, -15);
-		final Vector3 floorPosOffset = new Vector3(0, 0, floorDepth);
-
 //		Create models
 		model = buildFloor(floorWidth, floorHeight, floorDepth, tex);
 		modelInstFloor01 = new ModelInstance(model);
@@ -127,7 +173,56 @@ public class GameScreen implements Screen {
 		modelInstFloor02 = new ModelInstance(model2);
 		modelInstFloor02.transform.setToTranslation(floorPos.cpy().add(floorPosOffset));
 
+		level01 = new Level01(this);
+
 		player = new Player(this);
+
+		pixEnergyBar = new Pixmap(1, 1, Format.RGB888);
+		pixEnergyBar.setColor(Color.YELLOW);
+		pixEnergyBar.fill();
+
+		texEnergyBar = new Texture(pixEnergyBar);
+		texEnergyBar.setFilter(TextureFilter.Nearest, TextureFilter.Nearest);
+
+		barEnergySprite = new Sprite(texEnergyBar);
+		barEnergySprite.setSize(((barEnergySprite.getWidth() * 100) / game.PPM) * 4,
+				((barEnergySprite.getHeight() * 4) / game.PPM) * 4);
+
+		barEnergySprite.setPosition(((Gdx.graphics.getWidth() / 2) / 16) - barEnergySprite.getWidth() / 2, 24 / 16);
+
+		pixHpBar = new Pixmap(1, 1, Format.RGB888);
+		pixHpBar.setColor(Color.RED);
+		pixHpBar.fill();
+
+		texHpBar = new Texture(pixHpBar);
+		texHpBar.setFilter(TextureFilter.Nearest, TextureFilter.Nearest);
+
+		barHpSprite = new Sprite(texHpBar);
+		barHpSprite.setSize(((barHpSprite.getWidth() * 100) / game.PPM) * 4,
+				((barHpSprite.getHeight() * 4) / game.PPM) * 4);
+
+		barHpSprite.setPosition(((Gdx.graphics.getWidth() / 2) / 16) - barHpSprite.getWidth() / 2, 10 / 16);
+
+		texRegTitle = new TextureRegion(game.atlas01.findRegion("title"));
+		spriteTitle = new Sprite(texRegTitle);
+		spriteTitle.setSize(((spriteTitle.getWidth() * 2) / game.PPM) * 4,
+				((spriteTitle.getHeight() * 2) / game.PPM) * 4);
+		spriteTitle.setPosition(((Gdx.graphics.getWidth() / 2) / 16) - spriteTitle.getWidth() / 2,
+				((Gdx.graphics.getHeight() / 2) / 16) - spriteTitle.getHeight() / 2);
+
+		texRegWin = new TextureRegion(game.atlas01.findRegion("win"));
+		spriteWin = new Sprite(texRegWin);
+		spriteWin.setSize(((spriteWin.getWidth() * 2) / game.PPM) * 4, ((spriteWin.getHeight() * 2) / game.PPM) * 4);
+		spriteWin.setPosition(((Gdx.graphics.getWidth() / 2) / 16) - spriteWin.getWidth() / 2,
+				((Gdx.graphics.getHeight() / 2) / 16) - spriteWin.getHeight() / 2);
+
+		texRegGameOver = new TextureRegion(game.atlas01.findRegion("gameOver"));
+		spriteGameOver = new Sprite(texRegGameOver);
+		spriteGameOver.setSize(((spriteGameOver.getWidth() * 2) / game.PPM) * 4,
+				((spriteGameOver.getHeight() * 2) / game.PPM) * 4);
+		spriteGameOver.setPosition(((Gdx.graphics.getWidth() / 2) / 16) - spriteGameOver.getWidth() / 2,
+				((Gdx.graphics.getHeight() / 2) / 16) - spriteGameOver.getHeight() / 2);
+
 	}
 
 	private Model buildFloor(int width, int height, int depth, Texture tex) {
@@ -170,11 +265,13 @@ public class GameScreen implements Screen {
 		Box2D.init();
 	}
 
-	private World setupPhysicsWorld(World world) {
+	private World setupPhysicsWorld(World world, ContactListener listener) {
 		final Vector2 gravity = Vector2.Zero;
 		final boolean simulateInactiveBodies = true;
 
 		world = new World(gravity, simulateInactiveBodies);
+
+		world.setContactListener(listener);
 
 		return world;
 	}
@@ -212,76 +309,226 @@ public class GameScreen implements Screen {
 	private final int camPosSpeed = 3;
 	private final float camDirSpeed = 0.4f;
 
-	private final int playerMinX = 5;
-	private final int playerMaxX = 75;
-	private final int playerMinY = 5;
-	private final int playerMaxY = 40;
+	public final int playerMinX = 5;
+	public final int playerMaxX = 75;
+	public final int playerMinY = 8;
+	public final int playerMaxY = 40;
 	private final int playerSpeedX = 30;
 	private final int playerSpeedY = 20;
 
 	private final int bgSpeedX = 12;
 
-	private void handleInput(float delta) {
-		if (Gdx.input.isKeyPressed(Input.Keys.W)) {
-			if (player.body.getPosition().y <= playerMaxY) {
-				player.body.setLinearVelocity(new Vector2(player.body.getLinearVelocity().x, playerSpeedY));
+	private final float spriteBgMovingMinX = -0.41286284f;
+	private final float spriteBgMovingMaxX = -28.254248f;
 
-				camPersp.position.y += floorSpeedY / camPosSpeed * delta;
-				camPersp.direction.y = camPersp.direction.y - camDirSpeed * delta;
-			} else {
-				player.body.setLinearVelocity(new Vector2(player.body.getLinearVelocity().x, 0));
-			}
-		} else if (Gdx.input.isKeyPressed(Input.Keys.S)) {
-			if (player.body.getPosition().y >= playerMinY) {
-				player.body.setLinearVelocity(new Vector2(player.body.getLinearVelocity().x, -playerSpeedY));
+	public boolean flipPlayerX = false;
 
-				camPersp.position.y -= floorSpeedY / camPosSpeed * delta;
-				camPersp.direction.y = camPersp.direction.y + camDirSpeed * delta;
-			} else {
-				player.body.setLinearVelocity(new Vector2(player.body.getLinearVelocity().x, 0));
-			}
-		} else {
-			player.body.setLinearVelocity(new Vector2(player.body.getLinearVelocity().x, 0));
+	private void reset() {
+		for (Bullet bullet : bullets) {
+			bullet.remove = true;
 		}
 
-		if (Gdx.input.isKeyPressed(Input.Keys.A)) {
-			if (player.body.getPosition().x > playerMinX) {
-				player.body.setLinearVelocity(new Vector2(-playerSpeedX, player.body.getLinearVelocity().y));
-
-				modelInstFloor01.transform.translate(new Vector3(floorSpeedX * delta, 0, 0));
-				modelInstFloor02.transform.translate(new Vector3(floorSpeedX * delta, 0, 0));
-
-				spriteBgMoving01.setPosition(spriteBgMoving01.getX() + bgSpeedX * delta, spriteBgMoving01.getY());
-			} else {
-				player.body.setLinearVelocity(new Vector2(0, player.body.getLinearVelocity().y));
-//				player.body.getPosition().set(new Vector2(playerMinX, player.body.getPosition().y));
-			}
-		} else if (Gdx.input.isKeyPressed(Input.Keys.D)) {
-			if (player.body.getPosition().x < playerMaxX) {
-				player.body.setLinearVelocity(new Vector2(playerSpeedX, player.body.getLinearVelocity().y));
-
-				modelInstFloor01.transform.translate(new Vector3(-floorSpeedX * delta, 0, 0));
-				modelInstFloor02.transform.translate(new Vector3(-floorSpeedX * delta, 0, 0));
-
-				spriteBgMoving01.setPosition(spriteBgMoving01.getX() - bgSpeedX * delta, spriteBgMoving01.getY());
-			} else {
-				player.body.setLinearVelocity(new Vector2(0, player.body.getLinearVelocity().y));
-//				player.body.getPosition().set(new Vector2(playerMaxX, player.body.getPosition().y));
-			}
-		} else {
-			player.body.setLinearVelocity(new Vector2(0, player.body.getLinearVelocity().y));
+		for (Enemy enemy : enemies) {
+			enemy.remove = true;
 		}
 
-//		System.out.println(player.body.getLinearVelocity());
-//		System.out.println(player.body.getPosition());
-//		System.out.println(camPersp.position.y);
-//		System.out.println(camPersp.direction);
-//		System.out.println(spriteBgMoving01.getY());
-//		System.out.println(Gdx.app.getJavaHeap() / (1024L * 1024L) + " MiB");
+		for (EnemyBullet bullet : enemyBullets) {
+			bullet.remove = true;
+		}
+
+//		remove bullets		
+		for (int i = 0; i < bullets.size();) {
+			Bullet bullet = bullets.get(i);
+			if (bullet.remove) {
+				bullet.remove(0);
+
+				int lastBullet = bullets.size() - 1;
+
+				bullets.set(i, bullets.get(lastBullet));
+				bullets.remove(lastBullet);
+//				totalBullets--;
+			} else {
+				i++;
+			}
+		}
+
+//		remove Enemy bullets
+		for (int i = 0; i < enemyBullets.size();) {
+			EnemyBullet bullet = enemyBullets.get(i);
+			if (bullet.remove) {
+				bullet.remove(0);
+
+				int lastBullet = enemyBullets.size() - 1;
+
+				enemyBullets.set(i, enemyBullets.get(lastBullet));
+				enemyBullets.remove(lastBullet);
+//				totalBullets--;
+			} else {
+				i++;
+			}
+		}
+
+//		remove enemies
+		for (int i = 0; i < enemies.size();) {
+			Enemy enemy = enemies.get(i);
+			if (enemy.remove) {
+				enemy.remove(0);
+
+				int lastEnemy = enemies.size() - 1;
+
+				enemies.set(i, enemies.get(lastEnemy));
+				enemies.remove(lastEnemy);
+//				totalEnemies--;
+			} else {
+				i++;
+			}
+		}
+
+		spriteBgMoving01.setPosition(((Gdx.graphics.getWidth() / 2) / game.PPM) - (spriteBgMoving01.getWidth() / 2),
+				222f / game.PPM);
+		spriteBgStatic01.setPosition(((Gdx.graphics.getWidth() / 2) / game.PPM) - (spriteBgStatic01.getWidth() / 2),
+				/* 222f */ 0 / game.PPM);
+
+		modelInstFloor01.transform.setToTranslation(floorPos);
+		modelInstFloor02.transform.setToTranslation(floorPos.cpy().add(floorPosOffset));
+
+		level01 = new Level01(this);
+
+		player = new Player(this);
+
+		gameState = GameState.TITLE_SCREEN;
 	}
 
-	private final float spriteBgMoving01MaxY = 13.875f;
-	private final float spriteBgMoving01MinY = 13.3125f;
+	private void handleInput(float delta) {
+		if (gameState == GameState.GAME_OVER) {
+			if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+				reset();
+			}
+		} else if (gameState == GameState.WIN) {
+			if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+				reset();
+			}
+		} else if (gameState == GameState.TITLE_SCREEN) {
+			if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE) || Gdx.input.isKeyJustPressed(Input.Keys.W)
+					|| Gdx.input.isKeyJustPressed(Input.Keys.A) || Gdx.input.isKeyJustPressed(Input.Keys.S)
+					|| Gdx.input.isKeyJustPressed(Input.Keys.D)) {
+				gameState = GameState.PLAYING;
+			}
+		} else if (gameState == GameState.PLAYING) {
+//			TEST
+			if (Gdx.input.isKeyJustPressed(Input.Keys.P)) {
+				enemyBullets.add(new EnemyBullet(this, enemies.get(0).body.getPosition().x,
+						enemies.get(0).body.getPosition().y, getCurrentTime));
+			}
+
+			if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+				if (player.energy > 0) {
+					bullets.add(new Bullet(this, player.body.getTransform().getPosition().x,
+							player.body.getTransform().getPosition().y, getCurrentTime));
+					player.energy -= 20;
+				}
+			}
+
+			if (Gdx.input.isKeyPressed(Input.Keys.W)) {
+				if (player.body.getPosition().y <= playerMaxY) {
+					player.body.setLinearVelocity(new Vector2(player.body.getLinearVelocity().x, playerSpeedY));
+
+//				enemy
+					for (Enemy enemy : enemies)
+						enemy.body.setLinearVelocity(new Vector2(enemy.body.getLinearVelocity().x, -playerSpeedY));
+
+					camPersp.position.y += floorSpeedY / camPosSpeed * delta;
+					camPersp.direction.y = camPersp.direction.y - camDirSpeed * delta;
+				} else {
+					player.body.setLinearVelocity(new Vector2(player.body.getLinearVelocity().x, 0));
+
+//				enemy
+					for (Enemy enemy : enemies)
+						enemy.body.setLinearVelocity(new Vector2(enemy.body.getLinearVelocity().x, 0));
+				}
+			} else if (Gdx.input.isKeyPressed(Input.Keys.S)) {
+				if (player.body.getPosition().y >= playerMinY) {
+					player.body.setLinearVelocity(new Vector2(player.body.getLinearVelocity().x, -playerSpeedY));
+
+//				enemy
+					for (Enemy enemy : enemies)
+						enemy.body.setLinearVelocity(new Vector2(enemy.body.getLinearVelocity().x, playerSpeedY));
+
+					camPersp.position.y -= floorSpeedY / camPosSpeed * delta;
+					camPersp.direction.y = camPersp.direction.y + camDirSpeed * delta;
+				} else {
+					player.body.setLinearVelocity(new Vector2(player.body.getLinearVelocity().x, 0));
+
+//				enemy
+					for (Enemy enemy : enemies)
+						enemy.body.setLinearVelocity(new Vector2(enemy.body.getLinearVelocity().x, 0));
+				}
+			} else {
+				player.body.setLinearVelocity(new Vector2(player.body.getLinearVelocity().x, 0));
+
+//			enemy
+				for (Enemy enemy : enemies)
+					enemy.body.setLinearVelocity(new Vector2(enemy.body.getLinearVelocity().x, 0));
+			}
+
+			if (Gdx.input.isKeyPressed(Input.Keys.A)) {
+				flipPlayerX = false;
+
+				if (player.body.getPosition().x > playerMinX) {
+					player.body.setLinearVelocity(new Vector2(-playerSpeedX, player.body.getLinearVelocity().y));
+
+//				enemy
+					for (Enemy enemy : enemies)
+						enemy.body.setLinearVelocity(new Vector2(playerSpeedX, enemy.body.getLinearVelocity().y));
+
+					modelInstFloor01.transform.translate(new Vector3(floorSpeedX * delta, 0, 0));
+					modelInstFloor02.transform.translate(new Vector3(floorSpeedX * delta, 0, 0));
+
+					spriteBgMoving01.setPosition(spriteBgMoving01.getX() + bgSpeedX * delta, spriteBgMoving01.getY());
+				} else {
+					player.body.setLinearVelocity(new Vector2(0, player.body.getLinearVelocity().y));
+
+//				enemy
+					for (Enemy enemy : enemies)
+						enemy.body.setLinearVelocity(new Vector2(0, enemy.body.getLinearVelocity().y));
+				}
+			} else if (Gdx.input.isKeyPressed(Input.Keys.D)) {
+				flipPlayerX = true;
+
+				if (player.body.getPosition().x < playerMaxX) {
+					player.body.setLinearVelocity(new Vector2(playerSpeedX, player.body.getLinearVelocity().y));
+
+//				enemy
+					for (Enemy enemy : enemies)
+						enemy.body.setLinearVelocity(new Vector2(-playerSpeedX, enemy.body.getLinearVelocity().y));
+
+					modelInstFloor01.transform.translate(new Vector3(-floorSpeedX * delta, 0, 0));
+					modelInstFloor02.transform.translate(new Vector3(-floorSpeedX * delta, 0, 0));
+
+					spriteBgMoving01.setPosition(spriteBgMoving01.getX() - bgSpeedX * delta, spriteBgMoving01.getY());
+				} else {
+					player.body.setLinearVelocity(new Vector2(0, player.body.getLinearVelocity().y));
+
+//				enemy
+					for (Enemy enemy : enemies)
+						enemy.body.setLinearVelocity(new Vector2(0, enemy.body.getLinearVelocity().y));
+				}
+			} else {
+				player.body.setLinearVelocity(new Vector2(0, player.body.getLinearVelocity().y));
+
+//			enemy
+				for (Enemy enemy : enemies)
+					enemy.body.setLinearVelocity(new Vector2(0, enemy.body.getLinearVelocity().y));
+			}
+
+//		System.out.println(Gdx.app.getJavaHeap() / (1024L * 1024L) + " MiB");
+		} else {
+			player.body.setLinearVelocity(Vector2.Zero);
+		}
+	}
+
+//	private final float spriteBgMoving01MaxY = 13.875f;
+//	private final float spriteBgMoving01MinY = 13.3125f;
 
 	private final float camPerspPosMinY = 0.5f;
 	private final float camPerspPosMaxY = 2.75f;
@@ -294,27 +541,98 @@ public class GameScreen implements Screen {
 	private final int spriteBgMoving01PosY = 350;
 	private final int spriteBgMoving01HolyNumber = 30;
 
+	public long getCurrentTime;
+
 	private void tick(float delta) {
+		updateTime();
+
 		moveFloorTowardsCam(delta);
 		limitCameraPosY(camPerspPosMinY, camPerspPosMaxY);
 		limitCameraDirY(camPerspDirMinY, camPerspDirMaxY);
 		loopFloor(floorResetPosZ);
 		keepFloorInView(floorMaxX);
 
+		level01.tick(delta);
+
 		player.tick(delta);
 
-		if (spriteBgMoving01.getY() > spriteBgMoving01MaxY) {
-			spriteBgMoving01.setPosition(spriteBgMoving01.getX(), spriteBgMoving01MaxY);
-		} else if (spriteBgMoving01.getY() < spriteBgMoving01MinY) {
-			spriteBgMoving01.setPosition(spriteBgMoving01.getX(), spriteBgMoving01MinY);
+		barEnergySprite.setSize(((player.energy / 10f) / game.PPM) * 4,
+				((barEnergySprite.getHeight() * 4) / game.PPM) * 4);
+		barHpSprite.setSize(((player.hp / 10f) / game.PPM) * 4, ((barHpSprite.getHeight() * 4) / game.PPM) * 4);
+
+		for (Bullet bullet : bullets) {
+			bullet.tick(delta);
 		}
 
-//		spriteBg01.setPosition(spriteBg01.getX(), ((225/16)  - (camPersp.position.y / 4))); // old
+		for (EnemyBullet bullet : enemyBullets) {
+			bullet.tick(delta);
+		}
+
+		for (Enemy enemy : enemies)
+			enemy.tick(delta);
+
+//		remove bullets
+		for (int i = 0; i < bullets.size();) {
+			Bullet bullet = bullets.get(i);
+			if (bullet.remove) {
+				bullet.remove(delta);
+
+				int lastBullet = bullets.size() - 1;
+
+				bullets.set(i, bullets.get(lastBullet));
+				bullets.remove(lastBullet);
+//				totalBullets--;
+			} else {
+				i++;
+			}
+		}
+
+//		remove Enemy bullets
+		for (int i = 0; i < enemyBullets.size();) {
+			EnemyBullet bullet = enemyBullets.get(i);
+			if (bullet.remove) {
+				bullet.remove(delta);
+
+				int lastBullet = enemyBullets.size() - 1;
+
+				enemyBullets.set(i, enemyBullets.get(lastBullet));
+				enemyBullets.remove(lastBullet);
+//				totalBullets--;
+			} else {
+				i++;
+			}
+		}
+
+//		remove enemies
+		for (int i = 0; i < enemies.size();) {
+			Enemy enemy = enemies.get(i);
+			if (enemy.remove) {
+				enemy.remove(delta);
+
+				int lastEnemy = enemies.size() - 1;
+
+				enemies.set(i, enemies.get(lastEnemy));
+				enemies.remove(lastEnemy);
+//				totalEnemies--;
+			} else {
+				i++;
+			}
+		}
+
+//		spriteBgMoving01.setY(MathUtils.clamp(spriteBgMoving01.getY(), spriteBgMoving01MinY, spriteBgMoving01MaxY)); // huh?
 		spriteBgMoving01.setPosition(spriteBgMoving01.getX(),
 				((spriteBgMoving01PosY / game.PPM) - (camPersp.direction.y * spriteBgMoving01HolyNumber)));
 
+//		System.out.println(spriteBgMoving01.getX());
+
+		MathUtils.clamp(spriteBgMoving01.getX(), spriteBgMovingMinX, spriteBgMovingMaxX);
+
 		camPersp.update();
 //		camOrtho.update();
+	}
+
+	private void updateTime() {
+		getCurrentTime = gameUtils.getCurrentTime();
 	}
 
 	private void moveFloorTowardsCam(float delta) {
@@ -323,18 +641,11 @@ public class GameScreen implements Screen {
 	}
 
 	private void limitCameraDirY(float minY, float maxY) {
-		if (camPersp.direction.y <= minY) {
-			camPersp.direction.y = minY;
-		} else if (camPersp.direction.y >= maxY) {
-			camPersp.direction.y = maxY;
-		}
+		camPersp.direction.y = MathUtils.clamp(camPersp.direction.y, minY, maxY);
 	}
 
 	private void limitCameraPosY(float minY, float maxY) {
-		if (camPersp.position.y <= minY)
-			camPersp.position.y = minY;
-		else if (camPersp.position.y >= maxY)
-			camPersp.position.y = maxY;
+		camPersp.position.y = MathUtils.clamp(camPersp.position.y, minY, maxY);
 	}
 
 	private void loopFloor(float zResetPos) {
@@ -409,10 +720,130 @@ public class GameScreen implements Screen {
 				(Gdx.graphics.getHeight() / 2 - game.fboVirtualHeight / 2), game.fboVirtualWidth / game.PPM,
 				game.fboVirtualHeight / game.PPM, 0, 0, 1, 1);
 
+//		Ugly but works!
+		for (Enemy enemy : enemies)
+			if (enemy.scale == Scale.TINIEST)
+				enemy.enemySprite.draw(game.spriteBatch);
+
+		for (Bullet bullet : bullets) {
+			if (bullet.scale == Scale.TINIEST)
+				bullet.bulletSprite.draw(game.spriteBatch);
+		}
+
+		for (EnemyBullet bullet : enemyBullets) {
+			if (bullet.scale == Scale.TINIEST)
+				bullet.bulletSprite.draw(game.spriteBatch);
+		}
+
+		for (Enemy enemy : enemies)
+			if (enemy.scale == Scale.TINY)
+				enemy.enemySprite.draw(game.spriteBatch);
+
+		for (Bullet bullet : bullets) {
+			if (bullet.scale == Scale.TINY)
+				bullet.bulletSprite.draw(game.spriteBatch);
+		}
+
+		for (EnemyBullet bullet : enemyBullets) {
+			if (bullet.scale == Scale.TINY)
+				bullet.bulletSprite.draw(game.spriteBatch);
+		}
+
+		for (Enemy enemy : enemies)
+			if (enemy.scale == Scale.SMALLEST)
+				enemy.enemySprite.draw(game.spriteBatch);
+
+		for (Bullet bullet : bullets) {
+			if (bullet.scale == Scale.SMALLEST)
+				bullet.bulletSprite.draw(game.spriteBatch);
+		}
+
+		for (EnemyBullet bullet : enemyBullets) {
+			if (bullet.scale == Scale.SMALLEST)
+				bullet.bulletSprite.draw(game.spriteBatch);
+		}
+
+		for (Enemy enemy : enemies)
+			if (enemy.scale == Scale.SMALL)
+				enemy.enemySprite.draw(game.spriteBatch);
+
+		for (Bullet bullet : bullets) {
+			if (bullet.scale == Scale.SMALL)
+				bullet.bulletSprite.draw(game.spriteBatch);
+		}
+
+		for (EnemyBullet bullet : enemyBullets) {
+			if (bullet.scale == Scale.SMALL)
+				bullet.bulletSprite.draw(game.spriteBatch);
+		}
+
+		for (Enemy enemy : enemies)
+			if (enemy.scale == Scale.MEDIUM)
+				enemy.enemySprite.draw(game.spriteBatch);
+
+		for (Bullet bullet : bullets) {
+			if (bullet.scale == Scale.MEDIUM)
+				bullet.bulletSprite.draw(game.spriteBatch);
+		}
+
+		for (EnemyBullet bullet : enemyBullets) {
+			if (bullet.scale == Scale.MEDIUM)
+				bullet.bulletSprite.draw(game.spriteBatch);
+		}
+
+		for (Enemy enemy : enemies)
+			if (enemy.scale == Scale.LARGE)
+				enemy.enemySprite.draw(game.spriteBatch);
+
+		for (Bullet bullet : bullets) {
+			if (bullet.scale == Scale.LARGE)
+				bullet.bulletSprite.draw(game.spriteBatch);
+		}
+
+		for (EnemyBullet bullet : enemyBullets) {
+			if (bullet.scale == Scale.LARGE)
+				bullet.bulletSprite.draw(game.spriteBatch);
+		}
+
+		for (Enemy enemy : enemies)
+			if (enemy.scale == Scale.LARGEST)
+				enemy.enemySprite.draw(game.spriteBatch);
+
+		for (Bullet bullet : bullets) {
+			if (bullet.scale == Scale.LARGEST)
+				bullet.bulletSprite.draw(game.spriteBatch);
+		}
+
+		for (EnemyBullet bullet : enemyBullets) {
+			if (bullet.scale == Scale.LARGEST)
+				bullet.bulletSprite.draw(game.spriteBatch);
+		}
+
+//		for (int i = bullets.size() - 1; i >= 0; i--) {
+//			bullets.get(bullets.size() - 1 - i).bulletSprite.draw(game.spriteBatch); // render bullets in correct order
+//		}
+
 		player.playerSprite.draw(game.spriteBatch); // render player
+
+//		gui
+		barEnergySprite.draw(game.spriteBatch);
+		barHpSprite.draw(game.spriteBatch);
+
+		switch (gameState) {
+		case GAME_OVER:
+			spriteGameOver.draw(game.spriteBatch);
+			break;
+		case TITLE_SCREEN:
+			spriteTitle.draw(game.spriteBatch);
+			break;
+		case WIN:
+			spriteWin.draw(game.spriteBatch);
+			break;
+		}
+
 		game.spriteBatch.end();
 
-		b2dDebugRenderer.render(world, game.spriteBatch.getProjectionMatrix());
+//		b2dDebugRenderer.render(world, game.spriteBatch.getProjectionMatrix());
 
 		doPhysicsStep(delta);
 	}
@@ -467,7 +898,13 @@ public class GameScreen implements Screen {
 		tex.dispose();
 		tex2.dispose();
 
-		b2dDebugRenderer.dispose();
+		pixEnergyBar.dispose();
+		pixHpBar.dispose();
+
+		texEnergyBar.dispose();
+		texHpBar.dispose();
+
+//		b2dDebugRenderer.dispose();
 		world.dispose();
 	}
 

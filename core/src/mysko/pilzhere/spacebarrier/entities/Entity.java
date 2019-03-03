@@ -3,7 +3,9 @@ package mysko.pilzhere.spacebarrier.entities;
 import mysko.pilzhere.spacebarrier.screens.GameScreen;
 
 public class Entity {
-	private GameScreen screen;
+	protected GameScreen screen;
+	
+	public boolean remove = false;
 
 	public Entity(GameScreen screen) {
 		this.screen = screen;
@@ -17,6 +19,22 @@ public class Entity {
 
 	}
 
+	public void onCollisionBegin(Object object) {
+		
+	}
+	
+	public void onCollisionEnd(Object object) {
+		
+	}
+	
+	public void onPreSolve(Object object) {
+		
+	}
+	
+	public void onPostSolve(Object object) {
+		
+	}
+	
 	public void remove(float delta) {
 
 	}
